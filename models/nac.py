@@ -28,3 +28,28 @@ class NeuralAccumulatorCell(nn.Module):
     def forward(self, x):
         w = torch.tanh(self.w_hat) * torch.sigmoid(self.m_hat)
         return F.linear(x, w, self.bias)
+
+
+class NAC(nn.Module):
+
+    def __init__(self, in_dim, hidden_dim, out_dim, n_layers):
+        super().__init__()
+        self.in_dim = in_dim
+        self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
+        self.n_layers = n_layers
+
+        layers = []
+        for i in range(n_layers):
+            layers.append(
+                NeuralAccumulatorCell(
+                    hidden_dim if i > 0 else in_dim,
+                    hidden_dim if i < i - 1 else out_dim
+                )
+            )
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        output = self.model(x)
+        return output
