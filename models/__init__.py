@@ -1,5 +1,5 @@
 from .mlp import MLP
-from .nac import NeuralAccumulatorCell
-from .nalu import NALU
+from .nac import NeuralAccumulatorCell, NAC
+from .nalu import NeuralArithmeticLogicUnitCell, NALU
 
-__all__ = ['mlp', 'nac', 'nalu']
+__all__ = ['MLP', 'NAC', 'NALU']

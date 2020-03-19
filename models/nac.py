@@ -44,7 +44,7 @@ class NAC(nn.Module):
             layers.append(
                 NeuralAccumulatorCell(
                     hidden_dim if i > 0 else in_dim,
-                    hidden_dim if i < i - 1 else out_dim
+                    hidden_dim if i < n_layers - 1 else out_dim
                 )
             )
 
