@@ -13,7 +13,9 @@ arithmetic_functions = {
     'add': lambda x, y: x + y,
     'sub': lambda x, y: x - y,
     'mul': lambda x, y: x * y,
-    'div': lambda x, y: x / y
+    'div': lambda x, y: x / y,
+    'squared': lambda x, y: torch.pow(x, 2),
+    'sqrt': lambda x, y: torch.sqrt(x)
 }
 
 
