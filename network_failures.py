@@ -9,27 +9,22 @@ import torch.nn as nn
 from models import MLP
 
 
-train_range = [-5, 5]
-test_range = [-20, 20]
-learning_rate = 0.01
-n_epochs = 10000
-
-activations = [
-    nn.Hardtanh(),
-    nn.Sigmoid(),
-    nn.ReLU6(),
-    nn.Tanh(),
-    nn.Tanhshrink(),
-    nn.Hardshrink(),
-    nn.LeakyReLU(),
-    nn.Softshrink(),
-    nn.Softsign(),
-    nn.ReLU(),
-    nn.PReLU(),
-    nn.Softplus(),
-    nn.ELU(),
-    nn.SELU()
-]
+activations = {
+    'Hardtanh': nn.Hardtanh(),
+    'Sigmoid': nn.Sigmoid(),
+    'ReLU6': nn.ReLU6(),
+    'Tanh': nn.Tanh(),
+    'Tanhshrink': nn.Tanhshrink(),
+    'Hardshrink': nn.Hardshrink(),
+    'LeakyReLU': nn.LeakyReLU(),
+    'Softshrink': nn.Softshrink(),
+    'Softsign': nn.Softsign(),
+    'ReLU': nn.ReLU(),
+    'PReLU': nn.PReLU(),
+    'Softplus': nn.Softplus(),
+    'ELU': nn.ELU(),
+    'SELU': nn.SELU()
+}
 
 
 def train(args, model, optimizer, criterion, data):
@@ -53,8 +48,7 @@ def train(args, model, optimizer, criterion, data):
 def test(model, data):
     with torch.no_grad():
         output = model(data)
-        m = torch.mean(torch.abs(output - data))
-        return m
+        return torch.abs(output - data)
 
 
 def main():
@@ -68,7 +62,7 @@ def main():
     parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                         help='learning rate (default: 0.01)')
     parser.add_argument('--n-epochs', type=int, default=10000, metavar='E',
-                        help='number of training epochs (default: 1000)')
+                        help='number of training epochs (default: 10000)')
     parser.add_argument('--train-range', type=list, default=[-5, 5], metavar='S',
                         help='support for training (default: [-5, 5])')
     parser.add_argument('--test-range', type=list, default=[-20, 20], metavar='T',
@@ -91,8 +85,8 @@ def main():
 
     # train
     mse_list = []
-    for act in activations:
-        print('Training with {}...'.format(act))
+    for act_name, act in activations.items():
+        print('Training with {}...'.format(act_name))
         mses = []
 
         for i in range(100):
@@ -106,7 +100,7 @@ def main():
             criterion = nn.MSELoss()
 
             train(args, model, optimizer, criterion, train_data)
-            test_loss = test(model, train_data)
+            test_loss = test(model, test_data)
             mses.append(test_loss)
 
         mse_list.append(torch.cat(mses, dim=1).mean(dim=1))
