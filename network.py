@@ -19,11 +19,11 @@ arithmetic_functions = {
 }
 
 
-def generate_data(n_train, n_test, dim, n_sum, fn, support):
+def generate_data(n_vals, dim, n_sum, fn, support):
 
     X, y = [], []
     data = torch.FloatTensor(dim).uniform_(*support).unsqueeze_(1)
-    for i in range(n_train + n_test):
+    for i in range(n_vals):
         idx_a = random.sample(range(dim), n_sum)
         idx_b = random.sample([x for x in range(dim) if x not in idx_a], n_sum)
 
@@ -36,13 +36,12 @@ def generate_data(n_train, n_test, dim, n_sum, fn, support):
     X = torch.FloatTensor(X)
     y = torch.FloatTensor(y).unsqueeze_(1)
 
-    idx = list(range(n_train + n_test))
+    idx = list(range(n_vals))
     np.random.shuffle(idx)
 
-    X_train, y_train = X[idx[:n_train]], y[idx[:n_train]]
-    X_test, y_test = X[idx[n_train:]], y[idx[n_train:]]
+    X_data, y_data = X[idx], y[idx]
 
-    return X_train, y_train, X_test, y_test
+    return X_data, y_data
 
 
 def train(args, model, optimizer, criterion, data, target):
@@ -84,8 +83,10 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--n-epochs', type=int, default=10000, metavar='E',
                         help='number of training epochs (default: 1000)')
-    parser.add_argument('--support', type=list, default=[5, 10], metavar='S',
-                        help='support for training (default: [5, 10])')
+    parser.add_argument('--interp-support', type=list, default=[1, 100], metavar='S',
+                        help='support for interpolation (default: [1, 100])')
+    parser.add_argument('--extrap-support', type=list, default=[101, 200], metavar='S',
+                        help='support for extrapolation (default: [101, 200])')
     parser.add_argument('--n-sum', type=int, default=5, metavar='NS',
                         help='num functions to sum (default: 5)')
     parser.add_argument('--log-interval', type=int, default=500, metavar='LI',
@@ -122,18 +123,32 @@ def main():
     ]
 
     results = {}
+    results['interp'] = {}
+    results['extrap'] = {}
 
     for fn_type, fn in arithmetic_functions.items():
         print('-> Testing function: {}'.format(fn_type))
-        results[fn_type] = []
+        results['interp'][fn_type] = []
+        results['extrap'][fn_type] = []
 
-        X_train, y_train, X_test, y_test = generate_data(
-            n_train=500, n_test=50, dim=100,
-            n_sum=args.n_sum, fn=fn, support=args.support
+        Xtrain, ytrain = generate_data(
+            n_vals=500, dim=100, n_sum=args.n_sum,
+            fn=fn, support=args.interp_support
+        )
+
+        Xtest_interp, ytest_interp = generate_data(
+            n_vals=50, dim=100, n_sum=args.n_sum,
+            fn=fn, support=args.interp_support
+        )
+
+        Xtest_extrap, ytest_extrap = generate_data(
+            n_vals=50, dim=100, n_sum=args.n_sum,
+            fn=fn, support=args.extrap_support
         )
 
         # random model results
-        random_results = []
+        random_results_interp = []
+        random_results_extrap = []
         for i in range(100):
             network = MLP(in_dim=2,
                           hidden_dim=args.hidden_dim,
@@ -141,25 +156,43 @@ def main():
                           n_layers=args.n_layers,
                           act=nn.ReLU6())
 
-            mse = test(network, X_test, y_test)
-            random_results.append(mse.item())
+            interp_mse = test(network, Xtest_interp, ytest_interp)
+            extrap_mse = test(network, Xtest_extrap, ytest_extrap)
 
-        results[fn_type].append(np.mean(random_results))
+            random_results_interp.append(interp_mse.item())
+            random_results_extrap.append(extrap_mse.item())
+
+        results['interp'][fn_type].append(np.mean(random_results_interp))
+        results['extrap'][fn_type].append(np.mean(random_results_extrap))
 
         # other models
         for net in models:
             print('\tRunning: {}'.format(net.__str__().split('(')[0]))
             optimizer = torch.optim.RMSprop(net.parameters(), lr=args.lr)
             criterion = nn.MSELoss()
-            train(args, net, optimizer, criterion, X_train, y_train)
-            mse = test(net, X_test, y_test).item()
+            train(args, net, optimizer, criterion, Xtrain, ytrain)
 
-            results[fn_type].append(mse)
+            interp_mse = test(net, Xtest_interp, ytest_interp).item()
+            extrap_mse = test(net, Xtest_extrap, ytest_extrap).item()
+
+            results['interp'][fn_type].append(interp_mse)
+            results['extrap'][fn_type].append(extrap_mse)
 
         # save results
-        with open(os.path.join(save_dir, 'nalu_results.csv'), 'w+') as f:
+        with open(os.path.join(save_dir, 'interp_results.csv'), 'w+') as f:
             f.write('Relu6,None,NAC,NALU\n')
-            for k, v in results.items():
+            for k, v in results['interp'].items():
+                rand_result = v[0]
+                normed_mse = [100.0 * x / rand_result for x in v[1:]]
+
+                if args.normalise:
+                    f.write('{:.5f},{:.5f},{:.5f},{:.5f}\n'.format(*normed_mse))
+                else:
+                    f.write('{:.5f},{:.5f},{:.5f},{:.5f}\n'.format(*v[1:]))
+
+        with open(os.path.join(save_dir, 'extrap_results.csv'), 'w+') as f:
+            f.write('Relu6,None,NAC,NALU\n')
+            for k, v in results['extrap'].items():
                 rand_result = v[0]
                 normed_mse = [100.0 * x / rand_result for x in v[1:]]
 
