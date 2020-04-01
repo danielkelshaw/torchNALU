@@ -1,5 +1,6 @@
 import os
 import argparse
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,19 @@ arithmetic_functions = {
     'div': lambda x, y: x / y,
     'squared': lambda x: torch.pow(x, 2),
     'sqrt': lambda x: torch.sqrt(x)
+}
+
+models = {
+    'None': None,
+    'NAC': None,
+    'NALU': None,
+    'ReLU6': nn.ReLU6(),
+    'Tanh': nn.Tanh(),
+    'Sigmoid': nn.Sigmoid(),
+    'Softsign': nn.Softsign(),
+    'SELU': nn.SELU(),
+    'ELU': nn.ELU(),
+    'ReLU': nn.ReLU()
 }
 
 
@@ -78,10 +92,7 @@ def main():
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    results = {}
-    results['interp'] = {}
-    results['extrap'] = {}
-
+    results = []
     for fn_type, fn in arithmetic_functions.items():
 
         if fn_type in ['squared', 'sqrt']:
@@ -105,29 +116,16 @@ def main():
             dim=(50, in_dim), fn=fn, support=args.extrap_support
         )
 
-        models = [
-            MLP(in_dim=in_dim,
-                hidden_dim=args.hidden_dim,
-                out_dim=1,
-                n_layers=args.n_layers,
-                act=nn.ReLU6()),
-            MLP(in_dim=in_dim,
-                hidden_dim=args.hidden_dim,
-                out_dim=1,
-                n_layers=args.n_layers,
-                act=None),
-            NAC(in_dim=in_dim,
-                hidden_dim=args.hidden_dim,
-                out_dim=1,
-                n_layers=args.n_layers),
-            NALU(in_dim=in_dim,
-                 hidden_dim=args.hidden_dim,
-                 out_dim=1,
-                 n_layers=args.n_layers)
-        ]
+        for name, model in models.items():
 
-        for net in models:
-            print('-> Running: {}'.format(net.__str__().split('(')[0]))
+            if name == 'NAC':
+                net = NAC(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers)
+            elif name == 'NALU':
+                net = NALU(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers)
+            else:
+                net = MLP(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers, act=model)
+
+            print('-> Running: {}'.format(name))
             optimizer = torch.optim.RMSprop(net.parameters(), lr=args.lr)
             criterion = nn.MSELoss()
             train(args, net, optimizer, criterion, Xtrain, ytrain)
@@ -135,19 +133,26 @@ def main():
             interp_mse = test(net, Xtest_interp, ytest_interp).item()
             extrap_mse = test(net, Xtest_extrap, ytest_extrap).item()
 
-            results['interp'][fn_type].append(interp_mse)
-            results['extrap'][fn_type].append(extrap_mse)
+            _tmp_interp = {
+                'type': 'interp',
+                'fn_type': fn_type,
+                'activation': name,
+                'mse': interp_mse
+            }
+
+            _tmp_extrap = {
+                'type': 'extrap',
+                'fn_type': fn_type,
+                'activation': name,
+                'mse': extrap_mse
+            }
+
+            results.append(_tmp_interp)
+            results.append(_tmp_extrap)
 
     # save results
-    with open(os.path.join(save_dir, 'interp_results.csv'), 'w+') as f:
-        f.write('Relu6,None,NAC,NALU\n')
-        for k, v in results['interp'].items():
-            f.write('{:.5f},{:.5f},{:.5f},{:.5f}\n'.format(*v))
-
-    with open(os.path.join(save_dir, 'extrap_results.csv'), 'w+') as f:
-        f.write('Relu6,None,NAC,NALU\n')
-        for k, v in results['extrap'].items():
-            f.write('{:.5f},{:.5f},{:.5f},{:.5f}\n'.format(*v))
+    df_results = pd.DataFrame(results)
+    df_results.to_csv(os.path.join(save_dir, 'results.csv'))
 
 
 if __name__ == '__main__':
