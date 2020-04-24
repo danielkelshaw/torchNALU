@@ -116,6 +116,11 @@ def main():
             dim=(50, in_dim), fn=fn, support=args.extrap_support
         )
 
+        print('-> Training random.')
+        net = MLP(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers, act=None)
+        random_mse_interp = torch.mean([test(net, Xtest_interp, ytest_interp) for i in range(100)]).item()
+        random_mse_extrap = torch.mean([test(net, Xtest_extrap, ytest_extrap) for i in range(100)]).item()
+
         for name, model in models.items():
 
             if name == 'NAC':
@@ -137,14 +142,16 @@ def main():
                 'type': 'interp',
                 'fn_type': fn_type,
                 'activation': name,
-                'mse': interp_mse
+                'mse': interp_mse,
+                'random_mse': random_mse_interp
             }
 
             _tmp_extrap = {
                 'type': 'extrap',
                 'fn_type': fn_type,
                 'activation': name,
-                'mse': extrap_mse
+                'mse': extrap_mse,
+                'random_mse': random_mse_extrap
             }
 
             results.append(_tmp_interp)
@@ -152,6 +159,11 @@ def main():
 
     # save results
     df_results = pd.DataFrame(results)
+
+    df_results['normalised_mse'] = df_results.apply(
+        lambda row: 100.0 * row['mse'] / row['random_mse'], axis=1
+    )
+
     df_results.to_csv(os.path.join(save_dir, 'results.csv'))
 
 
