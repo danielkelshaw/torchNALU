@@ -101,8 +101,6 @@ def main():
             in_dim = 2
 
         print('-> Testing function: {}'.format(fn_type))
-        results['interp'][fn_type] = []
-        results['extrap'][fn_type] = []
 
         Xtrain, ytrain = generate_data(
             dim=(500, in_dim), fn=fn, support=args.interp_support
@@ -118,8 +116,16 @@ def main():
 
         print('-> Training random.')
         net = MLP(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers, act=None)
-        random_mse_interp = torch.mean([test(net, Xtest_interp, ytest_interp) for i in range(100)]).item()
-        random_mse_extrap = torch.mean([test(net, Xtest_extrap, ytest_extrap) for i in range(100)]).item()
+
+        random_mse_interp = torch.mean(
+            torch.stack([test(net, Xtest_interp, ytest_interp)
+                         for i in range(100)])
+        ).item()
+
+        random_mse_extrap = torch.mean(
+            torch.stack([test(net, Xtest_extrap, ytest_extrap)
+                         for i in range(100)])
+        ).item()
 
         for name, model in models.items():
 
