@@ -40,9 +40,9 @@ def train(args, model, optimizer, criterion, data):
         optimizer.step()
 
         if epoch % args.log_interval == 0:
-            print('Epoch {:02}\t'
-                  'Training Loss = {:.5f}\t'
-                  'MEA = {:.5f}'.format(epoch, loss, m))
+            print(f'Epoch {epoch:02}\t'
+                  f'Training Loss = {loss:.5f}\t'
+                  f'MEA = {m:.5f}')
 
 
 def test(model, data):
@@ -86,7 +86,7 @@ def main():
     # train
     mse_list = []
     for act_name, act in activations.items():
-        print('Training with {}...'.format(act_name))
+        print(f'Training with {act_name}...')
         mses = []
 
         for i in range(100):
