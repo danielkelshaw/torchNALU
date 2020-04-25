@@ -51,9 +51,9 @@ def train(args, model, optimizer, criterion, data, target):
         optimizer.step()
 
         if epoch % args.log_interval == 0:
-            print('Epoch {:05}:\t'
-                  'Loss = {:.5f}\t'
-                  'MEA = {:.5f}'.format(epoch, loss, m))
+            print(f'Epoch {epoch:05}:\t'
+                  f'Loss = {loss:.5f}\t'
+                  f'MEA = {m:.5f}')
 
 
 def test(model, data, target):
@@ -100,7 +100,7 @@ def main():
         else:
             in_dim = 2
 
-        print('-> Testing function: {}'.format(fn_type))
+        print(f'-> Testing function: {fn_type}')
 
         Xtrain, ytrain = generate_data(
             dim=(500, in_dim), fn=fn, support=args.interp_support
@@ -136,7 +136,7 @@ def main():
             else:
                 net = MLP(in_dim=in_dim, hidden_dim=args.hidden_dim, out_dim=1, n_layers=args.n_layers, act=model)
 
-            print('-> Running: {}'.format(name))
+            print(f'-> Running: {name}')
             optimizer = torch.optim.RMSprop(net.parameters(), lr=args.lr)
             criterion = nn.MSELoss()
             train(args, net, optimizer, criterion, Xtrain, ytrain)
