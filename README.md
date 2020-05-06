@@ -39,3 +39,5 @@ initialised model.
     primaryClass={cs.NE}
 }
 ```
+
+###### PyTorch implementation of **[Neural Arithmetic Logic Units](https://arxiv.org/abs/1808.00508)**<br>Made by Daniel Kelshaw
